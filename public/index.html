@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>機票查詢系統</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: "Segoe UI", Arial, sans-serif;
+      background-image: url('images/plane_bg.jpg'); /* 請確保這個圖片路徑正確 */
+      background-size: cover;
+      background-position: center;
+      background-attachment: fixed;
+      color: #333;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 40px auto;
+      background: rgba(255, 255, 255, 0.85);
+      padding: 30px;
+      border-radius: 16px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+    }
+
+    h2 {
+      margin-top: 0;
+      text-align: center;
+      color: #333;
+    }
+
+    form, button, select {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 10px;
+    }
+
+    input[type="date"], input[type="number"], select {
+      padding: 8px;
+      font-size: 16px;
+      border-radius: 8px;
+      border: 1px solid #aaa;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      background-color: #3498db;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #2980b9;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+
+    table, th, td {
+      border: 1px solid #999;
+    }
+
+    th, td {
+      padding: 10px;
+      text-align: center;
+      background: rgba(255, 255, 255, 0.9);
+    }
+
+    #result {
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h2>🔍 單日機票查詢</h2>
+  <form id="searchForm">
+    <label>請輸入日期（YYYY-MM-DD）：
+      <input type="date" name="date" required>
+    </label>
+    <button type="submit">查詢</button>
+  </form>
+
+  <h2>📅 月票價查詢</h2>
+  <label>選擇月份：
+    <select id="monthSelect">
+      <option value="may">2025 年 5 月</option>
+      <option value="june">2025 年 6 月</option>
+    </select>
+  </label>
+  <button onclick="getMonthData()">顯示票價</button>
+
+  <h2>✏️ 新增或更新票價</h2>
+  <form id="updateForm">
+    <label>日期（YYYY-MM-DD）：
+      <input type="date" name="date" required>
+    </label>
+    <label>價格：
+      <input type="number" name="price" required>
+    </label>
+    <button type="submit">送出</button>
+  </form>
+
+  <div id="result"></div>
+</div>
+
+<script>
+  const resultDiv = document.getElementById('result');
+
+  document.getElementById('searchForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const date = e.target.date.value;
+    const res = await fetch(`/api/flight/${date}`);
+    const data = await res.json();
+    if (data) {
+      resultDiv.innerHTML = `
+        <h3>查詢結果</h3>
+        <table>
+          <tr><th>航班</th><th>出發地</th><th>目的地</th><th>日期</th><th>價格</th></tr>
+          <tr>
+            <td>${data.flight_number}</td>
+            <td>${data.departure}</td>
+            <td>${data.arrival}</td>
+            <td>${data.date}</td>
+            <td>${data.price}</td>
+          </tr>
+        </table>
+      `;
+    } else {
+      resultDiv.innerHTML = `<p>查無此日期資料</p>`;
+    }
+  });
+
+  async function getMonthData() {
+    const month = document.getElementById('monthSelect').value;
+    const res = await fetch(`/api/flights/${month}`);
+    const data = await res.json();
+    if (data.length > 0) {
+      let rows = data.map(d => `
+        <tr>
+          <td>${d.date}</td>
+          <td>${d.flight_number}</td>
+          <td>${d.departure}</td>
+          <td>${d.arrival}</td>
+          <td>${d.price}</td>
+        </tr>`).join('');
+      resultDiv.innerHTML = `
+        <h3>2025 年 ${month === 'may' ? '5 月' : '6 月'} 台北 → 東京票價表</h3>
+        <table>
+          <tr><th>日期</th><th>航班</th><th>出發地</th><th>目的地</th><th>價格</th></tr>
+          ${rows}
+        </table>
+      `;
+    } else {
+      resultDiv.innerHTML = `<p>找不到 ${month} 的資料</p>`;
+    }
+  }
+
+  document.getElementById('updateForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const date = form.date.value;
+    const price = form.price.value;
+
+    const res = await fetch('/api/upsert', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ date, price })
+    });
+
+    const msg = await res.text();
+    alert(msg);
+    form.reset();
+  });
+</script>
+</body>
+</html>
