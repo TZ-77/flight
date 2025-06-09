@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <title><%= title %></title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: "Segoe UI", Arial, sans-serif;
+            background-image: url('/images/plane_bg.jpg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            color: #333;
+        }
+        .container {
+            max-width: 800px;
+            margin: 40px auto;
+            background: rgba(255, 255, 255, 0.85);
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+        }
+        h2 {
+            text-align: center;
+        }
+        #chartBox {
+            margin-top: 30px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>📈 即時票價查詢：TPE → TYO（2025/07/29 - 08/05）</h2>
+    <p style="text-align:center;">每次打開此頁面將即時爬取票價並記錄到資料庫，並呈現今日價格趨勢</p>
+
+    <% if (history.length === 0) { %>
+        <p style="text-align:center;">查無今日紀錄</p>
+    <% } else { %>
+        <canvas id="priceChart" height="120"></canvas>
+    <% } %>
+</div>
+
+<script>
+    const history = <%- JSON.stringify(history) %>;
+    if (history.length > 0) {
+        const ctx = document.getElementById("priceChart").getContext("2d");
+        const chart = new Chart(ctx, {
+            type: "line",
+            data: {
+                labels: history.map(d => d.time),
+                datasets: [{
+                    label: "即時票價（TWD）",
+                    data: history.map(d => d.price),
+                    borderColor: "#3498db",
+                    backgroundColor: "rgba(52,152,219,0.1)",
+                    borderWidth: 2,
+                    tension: 0.3
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const index = context.dataIndex;
+                                const airline = history[index].airline;
+                                return `${airline}：NT$${context.parsed.y}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        title: {
+                            display: true,
+                            text: "價格 (TWD)"
+                        },
+                        beginAtZero: false
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: "查詢時間"
+                        }
+                    }
+                }
+            }
+        });
+    }
+</script>
+</body>
+</html>
